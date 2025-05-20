@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Detection</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #3498db;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        #imagePreview {
+            max-width: 100%;
+            margin-top: 20px;
+            display: none;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .tumor {
+            background-color: #ffdddd;
+            border-left: 5px solid #e74c3c;
+        }
+        .no-tumor {
+            background-color: #ddffdd;
+            border-left: 5px solid #2ecc71;
+        }
+        .error {
+            background-color: #fff3cd;
+            border-left: 5px solid #ffc107;
+        }
+        .confidence-bar {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .confidence-level {
+            height: 100%;
+            background-color: #3498db;
+            text-align: right;
+            padding-right: 5px;
+            color: white;
+            line-height: 20px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Brain Tumor Detection</h1>
+        <p>Upload a brain MRI scan to check for tumors</p>
+
+        <div class="upload-area" id="uploadArea">
+            <p>Drag & drop an image here or click to select</p>
+            <input type="file" id="fileInput" name="file" accept="image/*" style="display: none;">
+            <img id="imagePreview" alt="Preview">
+        </div>
+
+        <button type="button" id="predictBtn">Analyze Image</button>
+
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const predictBtn = document.getElementById('predictBtn');
+        const resultDiv = document.getElementById('result');
+
+        let selectedFile = null;
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#e8f4fc';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '';
+
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Handle click to select
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (!file.type.match('image.*')) {
+                showResult('Please upload an image file (JPEG, PNG)', 'error');
+                return;
+            }
+
+            selectedFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                resultDiv.style.display = 'none';
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Handle Analyze button click
+        predictBtn.addEventListener('click', async () => {
+            if (!fileInput.files.length) {
+                showResult('Please select an image first', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                predictBtn.disabled = true;
+                predictBtn.textContent = 'Processing...';
+
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.error) {
+                    showResult(data.error, 'error');
+                } else {
+                    const resultClass = data.prediction.includes('Yes') ? 'tumor' : 'no-tumor';
+                    const confidencePercent = data.confidence;
+
+                    let resultHtml = `<h3>${data.prediction}</h3>`;
+                    resultHtml += `<p>Confidence: ${confidencePercent}%</p>`;
+                    resultHtml += `<div class="confidence-bar">
+                                      <div class="confidence-level" style="width: ${confidencePercent}%">
+                                        ${confidencePercent}%
+                                      </div>
+                                    </div>`;
+
+                    resultDiv.innerHTML = resultHtml;
+                    resultDiv.className = resultClass;
+                    resultDiv.style.display = 'block';
+                }
+            } catch (error) {
+                console.error(error);
+                showResult('Error communicating with server: ' + error.message, 'error');
+            } finally {
+                predictBtn.disabled = false;
+                predictBtn.textContent = 'Analyze Image';
+            }
+        });
+
+        function showResult(message, className) {
+            resultDiv.textContent = message;
+            resultDiv.className = className;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Detection System</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.9.1/gsap.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-dark: #4f46e5;
+            --secondary: #ec4899;
+            --bg-light: #f9fafb;
+            --bg-dark: #111827;
+            --text-light: #f3f4f6;
+            --text-dark: #1f2937;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            transition: all 0.3s ease-in-out;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            overflow-x: hidden;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: var(--text-light);
+            padding: 2rem 0;
+            text-align: center;
+            border-radius: 0 0 20px 20px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 0.5rem;
+            font-weight: 700;
+        }
+
+        h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+            color: var(--primary);
+        }
+
+        header p {
+            font-size: 1.2rem;
+            max-width: 800px;
+            margin: 0 auto;
+            opacity: 0.9;
+        }
+
+        .intro-animation {
+            position: relative;
+            min-height: 300px;
+            margin: 4rem 0;
+            overflow: hidden;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        #brain-model {
+            width: 100%;
+            height: 300px;
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+        }
+
+        .upload-section {
+            background-color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            margin-bottom: 2rem;
+        }
+
+        .upload-container {
+            border: 2px dashed var(--primary);
+            border-radius: 10px;
+            padding: 3rem 2rem;
+            text-align: center;
+            cursor: pointer;
+            background-color: rgba(99, 102, 241, 0.05);
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .upload-container:hover {
+            background-color: rgba(99, 102, 241, 0.1);
+            transform: translateY(-5px);
+        }
+
+        .upload-container i {
+            font-size: 3rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .upload-container h3 {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .upload-container p {
+            color: #6b7280;
+            margin-bottom: 1rem;
+        }
+
+        input[type="file"] {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            box-shadow: 0 4px 10px rgba(99, 102, 241, 0.3);
+        }
+
+        button:hover {
+            background-color: var(--primary-dark);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(99, 102, 241, 0.4);
+        }
+
+        button:disabled {
+            background-color: #a5a6f6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .result-section {
+            background-color: white;
+            border-radius: 15px;
+            padding: 2rem;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+
+        .result-section.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .result-container {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 2rem;
+            margin: 2rem 0;
+            width: 100%;
+        }
+
+        .image-preview {
+            width: 100%;
+            max-width: 400px;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .image-preview img {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .result-details {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .result-status {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        .negative {
+            color: #10b981;
+        }
+
+        .positive {
+            color: #ef4444;
+        }
+
+        .probability-bar {
+            width: 100%;
+            height: 30px;
+            background-color: #e5e7eb;
+            border-radius: 15px;
+            overflow: hidden;
+            position: relative;
+            margin: 1.5rem 0;
+        }
+
+        .probability-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 15px;
+            transition: width 1.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+        }
+
+        .negative .probability-fill {
+            background: linear-gradient(90deg, #10b981, #34d399);
+        }
+
+        .positive .probability-fill {
+            background: linear-gradient(90deg, #f87171, #ef4444);
+        }
+
+        .probability-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-weight: 600;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+        }
+
+        #result-3d {
+            width: 100%;
+            height: 300px;
+            background-color: rgba(0, 0, 0, 0.03);
+            border-radius: 10px;
+            margin-top: 2rem;
+        }
+
+        .loading {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 1rem;
+            margin: 2rem 0;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .loading-spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #e5e7eb;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .loading-text {
+            font-size: 1.1rem;
+            color: var(--primary);
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            margin-top: 4rem;
+            color: #6b7280;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 1rem;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .upload-container {
+                padding: 2rem 1rem;
+            }
+
+            .result-container {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Brain Tumor Detection</h1>
+            <p>An advanced AI-powered brain tumor detection system using MRI images. Upload a brain MRI scan to detect the presence of a tumor with high accuracy.</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="intro-animation">
+            <div id="brain-model"></div>
+        </div>
+
+        <div class="upload-section">
+            <h2>Upload MRI Scan</h2>
+            <div class="upload-container" id="upload-container">
+                <i class="fas fa-upload"></i>
+                <h3>Drag & Drop your MRI scan</h3>
+                <p>or click to browse files</p>
+                <p>Supported formats: JPG, PNG, JPEG</p>
+                <input type="file" id="file-input" accept=".jpg,.jpeg,.png">
+            </div>
+            <div class="selected-file" id="selected-file" style="margin-top: 1rem; display: none;">
+                <p><strong>Selected file:</strong> <span id="file-name"></span></p>
+            </div>
+            <div style="text-align: center; margin-top: 1.5rem;">
+                <button id="upload-button" disabled>
+                    <i class="fas fa-brain"></i>
+                    Analyze MRI Scan
+                </button>
+            </div>
+        </div>
+
+        <div class="loading" id="loading">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">Analyzing MRI scan...</div>
+        </div>
+
+        <div class="result-section" id="result-section">
+            <h2>Analysis Result</h2>
+            <div class="result-container">
+                <div class="image-preview">
+                    <img id="preview-image" src="" alt="Brain MRI Scan">
+                </div>
+                <div class="result-details">
+                    <div id="result-status" class="result-status">
+                        <!-- Will be filled dynamically -->
+                    </div>
+                    <p id="result-description">
+                        <!-- Will be filled dynamically -->
+                    </p>
+                    <div class="probability-container">
+                        <div class="probability-label">
+                            <span>Confidence Score:</span>
+                            <span id="probability-percentage">0%</span>
+                        </div>
+                        <div class="probability-bar">
+                            <div class="probability-fill" id="probability-fill"></div>
+                            <div class="probability-text" id="probability-text">0%</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="result-3d"></div>
+        </div>
+    </div>
+
+    <footer>
+        <p>© 2025 Brain Tumor Detection System | All Rights Reserved</p>
+    </footer>
+
+    <script>
+        // DOM Elements
+        const fileInput = document.getElementById('file-input');
+        const uploadButton = document.getElementById('upload-button');
+        const selectedFile = document.getElementById('selected-file');
+        const fileName = document.getElementById('file-name');
+        const loading = document.getElementById('loading');
+        const resultSection = document.getElementById('result-section');
+        const previewImage = document.getElementById('preview-image');
+        const resultStatus = document.getElementById('result-status');
+        const resultDescription = document.getElementById('result-description');
+        const probabilityFill = document.getElementById('probability-fill');
+        const probabilityText = document.getElementById('probability-text');
+        const probabilityPercentage = document.getElementById('probability-percentage');
+
+        // File handling
+        fileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                fileName.textContent = file.name;
+                selectedFile.style.display = 'block';
+                uploadButton.disabled = false;
+                
+                // Preview image
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.src = e.target.result;
+                }
+                reader.readAsDataURL(file);
+            } else {
+                selectedFile.style.display = 'none';
+                uploadButton.disabled = true;
+            }
+        });
+
+        // Upload and analyze
+        uploadButton.addEventListener('click', function() {
+            if (!fileInput.files || !fileInput.files[0]) return;
+            
+            // Show loading
+            loading.classList.add('active');
+            
+            // Create form data
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+            
+            // Send to server
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide loading
+                loading.classList.remove('active');
+                
+                // Show results
+                displayResults(data);
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                loading.classList.remove('active');
+                alert('An error occurred during analysis. Please try again.');
+            });
+        });
+
+        // Display results
+        function displayResults(data) {
+            const confidencePercent = Math.round(data.confidence * 100);
+            
+            // Set status and description
+            if (data.has_tumor) {
+                resultStatus.textContent = 'Tumor Detected';
+                resultStatus.className = 'result-status positive';
+                resultDescription.textContent = `Our AI model has detected patterns consistent with a brain tumor in the MRI scan. The detection confidence is ${confidencePercent}%. Please consult with a healthcare professional for a proper diagnosis.`;
+            } else {
+                resultStatus.textContent = 'No Tumor Detected';
+                resultStatus.className = 'result-status negative';
+                resultDescription.textContent = `Our AI model did not detect any patterns consistent with a brain tumor in the MRI scan. The confidence of this result is ${confidencePercent}%. If you have concerns, please consult with a healthcare professional.`;
+            }
+            
+            // Update probability bar
+            probabilityFill.style.width = `${confidencePercent}%`;
+            probabilityText.textContent = `${confidencePercent}%`;
+            probabilityPercentage.textContent = `${confidencePercent}%`;
+            
+            // Add appropriate class for styling
+            probabilityFill.parentElement.className = `probability-bar ${data.has_tumor ? 'positive' : 'negative'}`;
+            
+            // Show result section with animation
+            resultSection.classList.add('active');
+            
+            // Update 3D animation based on result
+            updateResult3DAnimation(data.has_tumor, data.confidence);
+        }
+
+        // Three.js Brain Model Animation
+        let brainScene, brainCamera, brainRenderer, brainModel;
+        
+        // Enhanced Brain 3D Model Animation
+// This replaces the existing initBrainModel() function
+
+function initBrainModel() {
+    // Create scene
+    brainScene = new THREE.Scene();
+    
+    // Create camera with improved positioning
+    brainCamera = new THREE.PerspectiveCamera(65, document.getElementById('brain-model').offsetWidth / document.getElementById('brain-model').offsetHeight, 0.1, 1000);
+    brainCamera.position.z = 6;
+    brainCamera.position.y = 0.5;
+    
+    // Create renderer with enhanced settings
+    brainRenderer = new THREE.WebGLRenderer({ 
+        antialias: true, 
+        alpha: true,
+        precision: 'highp'
+    });
+    brainRenderer.setSize(document.getElementById('brain-model').offsetWidth, document.getElementById('brain-model').offsetHeight);
+    brainRenderer.setPixelRatio(window.devicePixelRatio);
+    brainRenderer.shadowMap.enabled = true;
+    brainRenderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    document.getElementById('brain-model').appendChild(brainRenderer.domElement);
+    
+    // Create anatomically accurate brain model
+    const brainGroup = new THREE.Group();
+    
+    // Create hemispheres
+    const createHemisphere = (side) => {
+        const isLeft = side === 'left';
+        const xOffset = isLeft ? -0.2 : 0.2;
+        
+        // Create main hemisphere volume
+        const hemisphereGeometry = new THREE.SphereGeometry(1.8, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+        const hemisphereMaterial = new THREE.MeshStandardMaterial({
+            color: 0xf0e6e6,
+            roughness: 0.7,
+            metalness: 0.1,
+            transparent: true,
+            opacity: 0.95
+        });
+        
+        const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
+        hemisphere.position.x = xOffset;
+        if (!isLeft) hemisphere.rotation.y = Math.PI;
+        hemisphere.name = isLeft ? "leftHemisphere" : "rightHemisphere";
+        
+        // Create sulci (brain folds) using displacement
+        const sulciCount = 18;
+        for (let i = 0; i < sulciCount; i++) {
+            const foldRadius = 0.05 + Math.random() * 0.12;
+            const torusGeometry = new THREE.TorusGeometry(
+                0.6 + Math.random() * 1.1, // radius
+                foldRadius, // tube radius
+                8, // radial segments
+                16, // tubular segments
+                Math.PI * (Math.random() * 0.7 + 0.3) // arc
+            );
+            
+            const foldMaterial = new THREE.MeshStandardMaterial({
+                color: isLeft ? 0xeed6d6 : 0xeed0d0,
+                roughness: 0.9,
+                metalness: 0.05,
+                transparent: true,
+                opacity: 0.95
+            });
+            
+            const fold = new THREE.Mesh(torusGeometry, foldMaterial);
+            
+            // Position within hemisphere bounds
+            fold.position.x = (Math.random() - 0.5) * 1.2 + xOffset;
+            fold.position.y = (Math.random() - 0.5) * 1.2 + 0.2;
+            fold.position.z = (Math.random() - 0.5) * 1.2;
+            
+            // Rotate randomly
+            fold.rotation.x = Math.random() * Math.PI * 2;
+            fold.rotation.y = Math.random() * Math.PI * 2;
+            fold.rotation.z = Math.random() * Math.PI * 2;
+            
+            hemisphere.add(fold);
+        }
+        
+        return hemisphere;
+    };
+    
+    // Add both hemispheres
+    const leftHemisphere = createHemisphere('left');
+    const rightHemisphere = createHemisphere('right');
+    brainGroup.add(leftHemisphere);
+    brainGroup.add(rightHemisphere);
+    
+    // Create cerebellum (back/bottom of brain)
+    const cerebellumGeometry = new THREE.SphereGeometry(0.8, 32, 32);
+    const cerebellumMaterial = new THREE.MeshStandardMaterial({
+        color: 0xe6d0d0,
+        roughness: 0.7,
+        metalness: 0.1,
+        transparent: true,
+        opacity: 0.95
+    });
+    
+    const cerebellum = new THREE.Mesh(cerebellumGeometry, cerebellumMaterial);
+    cerebellum.position.z = -1.2;
+    cerebellum.position.y = -1.1;
+    cerebellum.scale.set(1, 0.7, 0.9);
+    brainGroup.add(cerebellum);
+    
+    // Add cerebellum details (foliation)
+    const cerebellarFoldsCount = 12;
+    for (let i = 0; i < cerebellarFoldsCount; i++) {
+        const foldGeometry = new THREE.TorusGeometry(
+            0.4 + Math.random() * 0.3,
+            0.03 + Math.random() * 0.04,
+            6,
+            12,
+            Math.PI * (Math.random() * 0.3 + 0.2)
+        );
+        
+        const foldMaterial = new THREE.MeshStandardMaterial({
+            color: 0xdcc0c0,
+            roughness: 0.8,
+            metalness: 0.05
+        });
+        
+        const fold = new THREE.Mesh(foldGeometry, foldMaterial);
+        fold.position.copy(cerebellum.position);
+        fold.position.y += (Math.random() - 0.5) * 0.4;
+        fold.position.z += (Math.random() - 0.5) * 0.4;
+        fold.position.x += (Math.random() - 0.5) * 0.8;
+        
+        fold.rotation.x = Math.PI / 2 + (Math.random() - 0.5) * 0.5;
+        fold.rotation.y = Math.random() * Math.PI * 2;
+        
+        brainGroup.add(fold);
+    }
+    
+    // Add brain stem
+    const stemGeometry = new THREE.CylinderGeometry(0.15, 0.3, 1.5, 16);
+    const stemMaterial = new THREE.MeshStandardMaterial({
+        color: 0xdcc5c5,
+        roughness: 0.7,
+        metalness: 0.1
+    });
+    
+    const brainStem = new THREE.Mesh(stemGeometry, stemMaterial);
+    brainStem.position.y = -2;
+    brainStem.position.z = -0.5;
+    brainStem.rotation.x = Math.PI / 8;
+    brainGroup.add(brainStem);
+    
+    // Add corpus callosum (connecting the hemispheres)
+    const ccGeometry = new THREE.TorusGeometry(0.8, 0.12, 12, 24, Math.PI);
+    const ccMaterial = new THREE.MeshStandardMaterial({
+        color: 0xf8e8e8,
+        roughness: 0.5,
+        metalness: 0.2
+    });
+    
+    const corpusCallosum = new THREE.Mesh(ccGeometry, ccMaterial);
+    corpusCallosum.position.y = 0;
+    corpusCallosum.position.z = 0;
+    corpusCallosum.rotation.x = Math.PI / 2;
+    brainGroup.add(corpusCallosum);
+    
+    // Add ventricles (fluid-filled cavities)
+    const ventricleGeometry = new THREE.SphereGeometry(0.25, 16, 16);
+    const ventricleMaterial = new THREE.MeshStandardMaterial({
+        color: 0x70aeff,
+        roughness: 0.3,
+        metalness: 0.6,
+        transparent: true,
+        opacity: 0.7,
+        emissive: 0x3070ff,
+        emissiveIntensity: 0.2
+    });
+    
+    // Left lateral ventricle
+    const leftVentricle = new THREE.Mesh(ventricleGeometry, ventricleMaterial);
+    leftVentricle.position.set(-0.6, 0.1, 0.2);
+    leftVentricle.scale.set(1, 0.6, 0.7);
+    brainGroup.add(leftVentricle);
+    
+    // Right lateral ventricle
+    const rightVentricle = new THREE.Mesh(ventricleGeometry, ventricleMaterial);
+    rightVentricle.position.set(0.6, 0.1, 0.2);
+    rightVentricle.scale.set(1, 0.6, 0.7);
+    brainGroup.add(rightVentricle);
+    
+    // Add third ventricle
+    const thirdVentricle = new THREE.Mesh(ventricleGeometry, ventricleMaterial);
+    thirdVentricle.position.set(0, -0.1, 0);
+    thirdVentricle.scale.set(0.4, 0.5, 0.6);
+    brainGroup.add(thirdVentricle);
+    
+    // Add region highlights for different brain regions (lobes)
+    // Create lobes with subtle outlines
+    const createLobeOutline = (points, color) => {
+        const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+        curve.closed = true;
+        
+        const geometry = new THREE.TubeGeometry(curve, 64, 0.03, 8, false);
+        const material = new THREE.MeshBasicMaterial({ color });
+        
+        return new THREE.Mesh(geometry, material);
+    };
+    
+    // Frontal lobe outline (cognition, personality, motor function)
+    const frontalLobe = createLobeOutline([
+        [1.2, 0.8, 1], [0.8, 1.2, 0.8], [0.4, 1.4, 0], 
+        [0, 1.4, -0.3], [-0.4, 1.4, 0], [-0.8, 1.2, 0.8], 
+        [-1.2, 0.8, 1], [-0.8, 0.5, 1.5], [0, 0.4, 1.8], 
+        [0.8, 0.5, 1.5]
+    ], 0x6366f1);
+    brainGroup.add(frontalLobe);
+    
+    // Parietal lobe outline (sensory information, spatial awareness)
+    const parietalLobe = createLobeOutline([
+        [1.2, 0.5, -0.5], [0.8, 0.8, -1], [0.3, 0.9, -1.5], 
+        [0, 0.9, -1.7], [-0.3, 0.9, -1.5], [-0.8, 0.8, -1], 
+        [-1.2, 0.5, -0.5], [-0.9, 0.2, -0.2], [0, 0, 0], 
+        [0.9, 0.2, -0.2]
+    ], 0x63f1c0);
+    brainGroup.add(parietalLobe);
+    
+    // Temporal lobe outline (memory, language, auditory processing)
+    const temporalLobe = createLobeOutline([
+        [1.5, -0.5, 0.5], [1.2, -0.2, 1], [0.8, -0.1, 1.5], 
+        [0.4, 0, 1.7], [0, 0, 1.8], [-0.4, 0, 1.7], 
+        [-0.8, -0.1, 1.5], [-1.2, -0.2, 1], [-1.5, -0.5, 0.5], 
+        [-1.3, -0.8, 0], [-0.8, -1, -0.5], [0, -1.1, -0.7], 
+        [0.8, -1, -0.5], [1.3, -0.8, 0]
+    ], 0xf163c9);
+    brainGroup.add(temporalLobe);
+    
+    // Occipital lobe outline (visual processing)
+    const occipitalLobe = createLobeOutline([
+        [0.8, 0.4, -1.5], [0.4, 0.5, -1.8], [0, 0.5, -1.9],
+        [-0.4, 0.5, -1.8], [-0.8, 0.4, -1.5], [-0.6, 0, -1.7],
+        [0, -0.2, -1.8], [0.6, 0, -1.7]
+    ], 0xf1d363);
+    brainGroup.add(occipitalLobe);
+    
+    // Add neural pathways to illustrate connectivity
+    const pathways = createNeuralPathways();
+    brainGroup.add(pathways);
+    
+    // Add the brain group to the scene
+    brainGroup.rotation.x = -0.1;
+    brainScene.add(brainGroup);
+    brainModel = brainGroup;
+    
+    // Enhanced lighting setup for more realistic appearance
+    const ambientLight = new THREE.AmbientLight(0x404040, 1.8);
+    brainScene.add(ambientLight);
+    
+    const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+    mainLight.position.set(5, 5, 5);
+    mainLight.castShadow = true;
+    brainScene.add(mainLight);
+    
+    const blueLight = new THREE.DirectionalLight(0x6366f1, 0.6);
+    blueLight.position.set(-5, -5, -5);
+    brainScene.add(blueLight);
+    
+    const redLight = new THREE.PointLight(0xff9999, 0.8, 10);
+    redLight.position.set(0, 0, 2);
+    brainScene.add(redLight);
+    
+    // Create a pulsing animation for the ventricles and lights
+    const pulseVentricles = () => {
+        gsap.to([leftVentricle.material, rightVentricle.material, thirdVentricle.material], {
+            emissiveIntensity: 0.4,
+            opacity: 0.8,
+            duration: 2,
+            yoyo: true,
+            repeat: -1,
+            ease: "sine.inOut"
+        });
+    };
+    
+    const pulseLight = () => {
+        gsap.to(redLight, {
+            intensity: 1.2,
+            duration: 1.5,
+            yoyo: true,
+            repeat: -1,
+            ease: "sine.inOut"
+        });
+    };
+    
+    pulseVentricles();
+    pulseLight();
+    
+    // Add subtle animation to the brain regions to highlight functionality
+    const animateRegions = () => {
+        // Sequential highlighting of lobes
+        const lobes = [frontalLobe, temporalLobe, parietalLobe, occipitalLobe];
+        
+        lobes.forEach((lobe, index) => {
+            gsap.timeline({repeat: -1, repeatDelay: 3})
+                .to(lobe.material, {
+                    opacity: 0.9,
+                    emissive: new THREE.Color(lobe.material.color),
+                    emissiveIntensity: 0.5,
+                    duration: 1.5,
+                    delay: index * 4
+                })
+                .to(lobe.material, {
+                    opacity: 1,
+                    emissiveIntensity: 0,
+                    duration: 1.5,
+                    delay: 1
+                });
+        });
+    };
+    
+    animateRegions();
+    
+    // Main animation loop
+    function animate() {
+        requestAnimationFrame(animate);
+        
+        // Smooth rotation for the brain
+        brainModel.rotation.y += 0.005;
+        
+        // Add subtle "breathing" effect
+        const breatheTime = Date.now() * 0.001;
+        brainModel.scale.x = 1 + Math.sin(breatheTime) * 0.01;
+        brainModel.scale.y = 1 + Math.sin(breatheTime) * 0.01;
+        brainModel.scale.z = 1 + Math.sin(breatheTime) * 0.01;
+        
+        brainRenderer.render(brainScene, brainCamera);
+    }
+    
+    animate();
+    
+    // Add interactive elements
+    addBrainInteractivity();
+}
+
+// Helper function to create neural pathways visualizing brain connectivity
+function createNeuralPathways() {
+    const pathwaysGroup = new THREE.Group();
+    
+    // Create material for neural pathways
+    const pathMaterial = new THREE.LineBasicMaterial({ 
+        color: 0xffffff,
+        transparent: true,
+        opacity: 0.3
+    });
+    
+    // Function to create a curved pathway between two points
+    const createPathway = (start, end, controlPoint, segments = 50) => {
+        const curve = new THREE.QuadraticBezierCurve3(
+            new THREE.Vector3(...start),
+            new THREE.Vector3(...controlPoint),
+            new THREE.Vector3(...end)
+        );
+        
+        const points = curve.getPoints(segments);
+        const geometry = new THREE.BufferGeometry().setFromPoints(points);
+        return new THREE.Line(geometry, pathMaterial.clone());
+    };
+    
+    // Create pathways between brain regions
+    // Corpus callosum connections (between hemispheres)
+    for (let i = 0; i < 10; i++) {
+        const yOffset = -0.4 + i * 0.08;
+        const zOffset = -0.3 + i * 0.06;
+        const pathway = createPathway(
+            [-1.2, yOffset, zOffset],
+            [1.2, yOffset, zOffset],
+            [0, yOffset + 0.5, zOffset]
+        );
+        pathwaysGroup.add(pathway);
+        
+        // Animate the pathway to "pulse" data
+        animatePathway(pathway);
+    }
+    
+    // Connect frontal lobe to other regions
+    pathwaysGroup.add(createPathway(
+        [0.8, 0.7, 1], // frontal
+        [0.8, 0, -1],  // parietal
+        [1.2, 0.4, 0]
+    ));
+    
+    pathwaysGroup.add(createPathway(
+        [0.8, 0.7, 1], // frontal
+        [1.3, -0.3, 0.3], // temporal
+        [1.2, 0.2, 0.7]
+    ));
+    
+    pathwaysGroup.add(createPathway(
+        [-0.8, 0.7, 1], // left frontal
+        [-0.8, 0, -1],  // left parietal
+        [-1.2, 0.4, 0]
+    ));
+    
+    // Connect temporal lobe to other regions
+    pathwaysGroup.add(createPathway(
+        [1.3, -0.3, 0.3], // temporal
+        [0.6, 0.1, -1.7], // occipital
+        [1.1, -0.4, -0.7]
+    ));
+    
+    pathwaysGroup.add(createPathway(
+        [-1.3, -0.3, 0.3], // left temporal
+        [-0.6, 0.1, -1.7], // left occipital
+        [-1.1, -0.4, -0.7]
+    ));
+    
+    // Connect cerebellum to brain stem
+    for (let i = 0; i < 5; i++) {
+        const xOffset = -0.4 + i * 0.2;
+        const pathway = createPathway(
+            [xOffset, -1.1, -1.2], // cerebellum
+            [xOffset * 0.3, -2, -0.5], // brain stem
+            [xOffset * 0.6, -1.6, -1]
+        );
+        pathwaysGroup.add(pathway);
+    }
+    
+    return pathwaysGroup;
+}
+
+// Animate neural pathways to show brain activity
+function animatePathway(pathway) {
+    // Clone the material to avoid affecting other pathways
+    const material = pathway.material.clone();
+    pathway.material = material;
+    
+    // Create "data pulse" effect along neural pathways
+    gsap.to(material, {
+        opacity: 0.7,
+        duration: 1 + Math.random() * 2,
+        repeat: -1,
+        yoyo: true,
+        delay: Math.random() * 3,
+        ease: "sine.inOut"
+    });
+}
+
+// Add interactivity to the brain model
+function addBrainInteractivity() {
+    const brainModelElement = document.getElementById('brain-model');
+    
+    // Add event listener for hover
+    brainModelElement.addEventListener('mousemove', (event) => {
+        // Get mouse position relative to the container
+        const rect = brainModelElement.getBoundingClientRect();
+        const mouseX = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+        const mouseY = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+        
+        // Rotate brain slightly toward mouse position
+        gsap.to(brainModel.rotation, {
+            x: -0.1 + mouseY * 0.2,
+            y: mouseX * 0.5,
+            duration: 1,
+            ease: "power2.out"
+        });
+    });
+    
+    // Reset orientation when mouse leaves
+    brainModelElement.addEventListener('mouseleave', () => {
+        gsap.to(brainModel.rotation, {
+            x: -0.1,
+            duration: 1,
+            ease: "power2.out"
+        });
+    });
+}
+
+        // Result 3D Animation
+        let resultScene, resultCamera, resultRenderer, resultModel;
+        
+        function initResult3DAnimation() {
+            // Create scene
+            resultScene = new THREE.Scene();
+            
+            // Create camera
+            resultCamera = new THREE.PerspectiveCamera(75, document.getElementById('result-3d').offsetWidth / document.getElementById('result-3d').offsetHeight, 0.1, 1000);
+            resultCamera.position.z = 5;
+            
+            // Create renderer
+            resultRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            resultRenderer.setSize(document.getElementById('result-3d').offsetWidth, document.getElementById('result-3d').offsetHeight);
+            document.getElementById('result-3d').appendChild(resultRenderer.domElement);
+            
+            // Create brain group
+            const brainGroup = new THREE.Group();
+            
+            // Create more anatomically accurate brain
+            const hemisphereGeometry = new THREE.SphereGeometry(1.8, 32, 32, 0, Math.PI * 2, 0, Math.PI / 2);
+            
+            // Left hemisphere
+            const leftMaterial = new THREE.MeshStandardMaterial({
+                color: 0xf0e6e6,
+                roughness: 0.7,
+                metalness: 0.1,
+                wireframe: false,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const leftHemisphere = new THREE.Mesh(hemisphereGeometry, leftMaterial);
+            leftHemisphere.position.x = -0.2;
+            leftHemisphere.name = "leftHemisphere";
+            brainGroup.add(leftHemisphere);
+            
+            // Right hemisphere
+            const rightMaterial = new THREE.MeshStandardMaterial({
+                color: 0xf0e6e6,
+                roughness: 0.7,
+                metalness: 0.1,
+                wireframe: false,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const rightHemisphere = new THREE.Mesh(hemisphereGeometry, rightMaterial);
+            rightHemisphere.position.x = 0.2;
+            rightHemisphere.rotation.y = Math.PI;
+            rightHemisphere.name = "rightHemisphere";
+            brainGroup.add(rightHemisphere);
+            
+            // Add cerebellum (back/bottom of brain)
+            const cerebellumGeometry = new THREE.SphereGeometry(0.8, 24, 24);
+            const cerebellumMaterial = new THREE.MeshStandardMaterial({
+                color: 0xe6d0d0,
+                roughness: 0.7,
+                metalness: 0.1,
+                transparent: true,
+                opacity: 0.9
+            });
+            
+            const cerebellum = new THREE.Mesh(cerebellumGeometry, cerebellumMaterial);
+            cerebellum.position.z = -1;
+            cerebellum.position.y = -1;
+            cerebellum.scale.y = 0.7;
+            brainGroup.add(cerebellum);
+            
+            // Add brain stem
+            const stemGeometry = new THREE.CylinderGeometry(0.15, 0.3, 1.5, 16);
+            const stemMaterial = new THREE.MeshStandardMaterial({
+                color: 0xdcc5c5,
+                roughness: 0.7,
+                metalness: 0.1
+            });
+            
+            const brainStem = new THREE.Mesh(stemGeometry, stemMaterial);
+            brainStem.position.y = -2;
+            brainStem.position.z = -0.5;
+            brainStem.rotation.x = Math.PI / 8;
+            brainGroup.add(brainStem);
+            
+            // Create tumor (initially invisible)
+            const tumorGeometry = new THREE.SphereGeometry(0.4, 32, 32);
+            const tumorMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff3333,
+                roughness: 0.3,
+                metalness: 0.5,
+                transparent: true,
+                opacity: 0.8,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5
+            });
+            
+            const tumor = new THREE.Mesh(tumorGeometry, tumorMaterial);
+            // Position in right hemisphere
+            tumor.position.set(1, 0, 0.5);
+            tumor.scale.set(0, 0, 0); // Initially invisible
+            tumor.name = "tumor";
+            brainGroup.add(tumor);
+            
+            // Add a glow effect around tumor
+            const glowGeometry = new THREE.SphereGeometry(0.6, 32, 32);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0xff5555,
+                transparent: true,
+                opacity: 0.1,
+                side: THREE.BackSide
+            });
+            
+            const glow = new THREE.Mesh(glowGeometry, glowMaterial);
+            glow.position.copy(tumor.position);
+            glow.scale.set(0, 0, 0);
+            glow.name = "glow";
+            brainGroup.add(glow);
+            
+            // Add brain sections/lobes with subtle outlines
+            const lobes = createBrainLobes();
+            brainGroup.add(lobes);
+            
+            // Add to scene and position
+            brainGroup.rotation.x = -0.2;
+            resultScene.add(brainGroup);
+            resultModel = brainGroup;
+            
+            // Add lights
+            const ambientLight = new THREE.AmbientLight(0x404040, 2);
+            resultScene.add(ambientLight);
+            
+            const light1 = new THREE.DirectionalLight(0xffffff, 1);
+            light1.position.set(5, 5, 5);
+            resultScene.add(light1);
+            
+            const light2 = new THREE.DirectionalLight(0x6366f1, 0.5);
+            light2.position.set(-5, -5, -5);
+            resultScene.add(light2);
+            
+            // Add point light for tumor highlight
+            const pointLight = new THREE.PointLight(0xff5555, 0, 3);
+            pointLight.position.copy(tumor.position);
+            pointLight.name = "tumorLight";
+            resultScene.add(pointLight);
+            
+            // Add animation
+            function animate() {
+                requestAnimationFrame(animate);
+                
+                resultModel.rotation.y += 0.005;
+                
+                resultRenderer.render(resultScene, resultCamera);
+            }
+            
+            animate();
+        }
+        
+        // Helper to create brain lobes and structures
+        function createBrainLobes() {
+            const lobesGroup = new THREE.Group();
+            
+            // Create outlines for different lobes
+            const createLobe = (points, color) => {
+                const curve = new THREE.CatmullRomCurve3(points.map(p => new THREE.Vector3(...p)));
+                curve.closed = true;
+                
+                const geometry = new THREE.TubeGeometry(curve, 64, 0.03, 8, false);
+                const material = new THREE.MeshBasicMaterial({ color });
+                
+                return new THREE.Mesh(geometry, material);
+            };
+            
+            // Frontal lobe outline
+            const frontalLobe = createLobe([
+                [1.2, 0.8, 1], [0.8, 1.2, 0.8], [0.4, 1.4, 0], 
+                [0, 1.4, -0.3], [-0.4, 1.4, 0], [-0.8, 1.2, 0.8], 
+                [-1.2, 0.8, 1], [-0.8, 0.5, 1.5], [0, 0.4, 1.8], 
+                [0.8, 0.5, 1.5]
+            ], 0x6366f1);
+            lobesGroup.add(frontalLobe);
+            
+            // Parietal lobe outline
+            const parietalLobe = createLobe([
+                [1.2, 0.5, -0.5], [0.8, 0.8, -1], [0.3, 0.9, -1.5], 
+                [0, 0.9, -1.7], [-0.3, 0.9, -1.5], [-0.8, 0.8, -1], 
+                [-1.2, 0.5, -0.5], [-0.9, 0.2, -0.2], [0, 0, 0], 
+                [0.9, 0.2, -0.2]
+            ], 0x63f1c0);
+            lobesGroup.add(parietalLobe);
+            
+            // Temporal lobe outline
+            const temporalLobe = createLobe([
+                [1.5, -0.5, 0.5], [1.2, -0.2, 1], [0.8, -0.1, 1.5], 
+                [0.4, 0, 1.7], [0, 0, 1.8], [-0.4, 0, 1.7], 
+                [-0.8, -0.1, 1.5], [-1.2, -0.2, 1], [-1.5, -0.5, 0.5], 
+                [-1.3, -0.8, 0], [-0.8, -1, -0.5], [0, -1.1, -0.7], 
+                [0.8, -1, -0.5], [1.3, -0.8, 0]
+            ], 0xf163c9);
+            lobesGroup.add(temporalLobe);
+            
+            return lobesGroup;
+        }
+
+        function updateResult3DAnimation(hasTumor, confidence) {
+            // Get the tumor and glow
+            const tumor = resultModel.getObjectByName("tumor");
+            const glow = resultModel.getObjectByName("glow");
+            const light = resultScene.getObjectByName("tumorLight");
+            const leftHemisphere = resultModel.getObjectByName("leftHemisphere");
+            const rightHemisphere = resultModel.getObjectByName("rightHemisphere");
+            
+            if (hasTumor) {
+                // Show and animate tumor with elastic effect
+                gsap.to(tumor.scale, {
+                    x: confidence,
+                    y: confidence,
+                    z: confidence,
+                    duration: 2,
+                    ease: "elastic.out(1, 0.3)"
+                });
+                
+                // Animate glow
+                gsap.to(glow.scale, {
+                    x: confidence * 1.5,
+                    y: confidence * 1.5,
+                    z: confidence * 1.5,
+                    duration: 2.5,
+                    ease: "elastic.out(1, 0.2)"
+                });
+                
+                // Turn on and animate tumor light
+                gsap.to(light, {
+                    intensity: 2 * confidence,
+                    duration: 1.5
+                });
+                
+                // Pulse the tumor and glow
+                gsap.to(tumor.material, {
+                    opacity: 0.6,
+                    duration: 1,
+                    repeat: -1,
+                    yoyo: true
+                });
+                
+                gsap.to(glow.material, {
+                    opacity: 0.2,
+                    duration: 1.3,
+                    repeat: -1,
+                    yoyo: true,
+                    delay: 0.2
+                });
+                
+                // Show affected brain region
+                gsap.to(rightHemisphere.material, {
+                    emissive: new THREE.Color(0x661111),
+                    emissiveIntensity: 0.2 * confidence,
+                    color: new THREE.Color(0xffcccc),
+                    duration: 2
+                });
+                
+                // Create X-ray effect on the affected hemisphere
+                gsap.to(rightHemisphere.material, {
+                    opacity: 0.7,
+                    duration: 1.5
+                });
+                
+                // Add slicing animation to better see inside the brain
+                gsap.to(resultModel.rotation, {
+                    x: -0.5,
+                    duration: 2,
+                    ease: "power2.out"
+                });
+                
+                // Create a cross-section effect
+                setTimeout(() => {
+                    resultModel.rotation.y = Math.PI * 0.1; // Rotate to better show tumor
+                }, 500);
+                
+                // Add visual warning indicators
+                createWarningIndicators(tumor.position, confidence);
+                
+            } else {
+                // Hide tumor
+                gsap.to(tumor.scale, {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    duration: 1
+                });
+                
+                // Hide glow
+                gsap.to(glow.scale, {
+                    x: 0,
+                    y: 0,
+                    z: 0,
+                    duration: 1
+                });
+                
+                // Turn off tumor light
+                gsap.to(light, {
+                    intensity: 0,
+                    duration: 1
+                });
+                
+                // Healthy brain color
+                gsap.to([leftHemisphere.material, rightHemisphere.material], {
+                    emissive: new THREE.Color(0x113322),
+                    emissiveIntensity: 0.1,
+                    color: new THREE.Color(0xf0e6e6),
+                    opacity: 0.9,
+                    duration: 1.5
+                });
+                
+                // Healthy brain pulse animation
+                gsap.to(resultModel.scale, {
+                    x: 1.05,
+                    y: 1.05,
+                    z: 1.05,
+                    duration: 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "sine.inOut"
+                });
+                
+                // Add healthy brain scan animation effect
+                createHealthyScanEffect();
+            }
+        }
+        
+        // Helper function for tumor warning indicators
+        function createWarningIndicators(position, confidence) {
+            // Create markers pointing to tumor
+            const arrowCount = 3;
+            const arrowDistance = 1.5;
+            
+            for (let i = 0; i < arrowCount; i++) {
+                // Create a cone shape pointing to tumor
+                const arrowGeometry = new THREE.ConeGeometry(0.1, 0.3, 8);
+                const arrowMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff3333,
+                    transparent: true,
+                    opacity: 0
+                });
+                
+                const arrow = new THREE.Mesh(arrowGeometry, arrowMaterial);
+                
+                // Position around tumor
+                const angle = (i / arrowCount) * Math.PI * 2;
+                arrow.position.x = position.x + Math.cos(angle) * arrowDistance;
+                arrow.position.y = position.y + Math.sin(angle) * arrowDistance;
+                arrow.position.z = position.z;
+                
+                // Point to tumor
+                arrow.lookAt(position);
+                
+                // Add to scene
+                resultScene.add(arrow);
+                
+                // Animate arrow appearance
+                gsap.to(arrow.material, {
+                    opacity: 0.8 * confidence,
+                    duration: 1,
+                    delay: i * 0.2
+                });
+                
+                // Animate arrow movement
+                gsap.to(arrow.position, {
+                    x: position.x + Math.cos(angle) * (arrowDistance * 0.6),
+                    y: position.y + Math.sin(angle) * (arrowDistance * 0.6),
+                    z: position.z,
+                    duration: 2,
+                    repeat: -1,
+                    yoyo: true,
+                    ease: "power1.inOut",
+                    delay: i * 0.2
+                });
+                
+                // Clean up after animation
+                setTimeout(() => {
+                    resultScene.remove(arrow);
+                }, 10000);
+            }
+        }
+        
+        // Helper function for healthy scan effect
+        function createHealthyScanEffect() {
+            // Create a scanning plane that moves through the brain
+            const scanGeometry = new THREE.PlaneGeometry(5, 5);
+            const scanMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff88,
+                transparent: true,
+                opacity: 0.2,
+                side: THREE.DoubleSide
+            });
+            
+            const scanPlane = new THREE.Mesh(scanGeometry, scanMaterial);
+            scanPlane.position.z = -3;
+            scanPlane.rotation.x = Math.PI / 2;
+            resultScene.add(scanPlane);
+            
+            // Animate the scan plane
+            gsap.to(scanPlane.position, {
+                z: 3,
+                duration: 3,
+                ease: "power1.inOut",
+                onComplete: () => {
+                    // Remove the plane when done
+                    resultScene.remove(scanPlane);
+                }
+            });
+            
+            // Add scan line effect
+            const lineMaterial = new THREE.LineBasicMaterial({
+                color: 0x00ff88,
+                linewidth: 2
+            });
+            
+            const points = [];
+            points.push(new THREE.Vector3(-2.5, 0, 0));
+            points.push(new THREE.Vector3(2.5, 0, 0));
+            
+            const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+            const line = new THREE.Line(lineGeometry, lineMaterial);
+            scanPlane.add(line);
+        }
+
+        // Initialize 3D models when page loads
+        window.addEventListener('load', function() {
+            initBrainModel();
+            initResult3DAnimation();
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (brainRenderer && brainCamera) {
+                brainCamera.aspect = document.getElementById('brain-model').offsetWidth / document.getElementById('brain-model').offsetHeight;
+                brainCamera.updateProjectionMatrix();
+                brainRenderer.setSize(document.getElementById('brain-model').offsetWidth, document.getElementById('brain-model').offsetHeight);
+            }
+            
+            if (resultRenderer && resultCamera) {
+                resultCamera.aspect = document.getElementById('result-3d').offsetWidth / document.getElementById('result-3d').offsetHeight;
+                resultCamera.updateProjectionMatrix();
+                resultRenderer.setSize(document.getElementById('result-3d').offsetWidth, document.getElementById('result-3d').offsetHeight);
+            }
+        });
+    </script>
+</body>
+</html>

@@ -34,12 +34,18 @@ wheels/
 .installed.cfg
 *.egg
 
+# Virtual Environment
+venv/
+ENV/
+
 # IDE
 .idea/
 .vscode/
 *.iml
 *.iws
 *.ipr
+*.swp
+*.swo
 
 # Logs
 logs/
@@ -52,4 +58,32 @@ logs/
 .Spotlight-V100
 .Trashes
 ehthumbs.db
-Thumbs.db 
+Thumbs.db
+
+# Project specific
+static/
+training_frozencnn.jpeg
+
+# Data and Model files
+data/
+*.h5
+*.hdf5
+*.pkl
+*.model
+*.weights
+*.bin
+*.pt
+*.pth
+*.onnx
+*.tflite
+*.tfl
+*.lite
+*.pb
+*.savedmodel
+*.ckpt
+*.ckpt.data-00000-of-00001
+*.ckpt.index
+*.ckpt.meta
+*.meta
+*.data-00000-of-00001
+*.index 

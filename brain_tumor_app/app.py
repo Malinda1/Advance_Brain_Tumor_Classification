@@ -3,6 +3,9 @@ import numpy as np
 from flask import Flask, render_template, request, jsonify
 from werkzeug.utils import secure_filename
 from flask_cors import CORS
+from tensorflow.keras.models import load_model
+from tensorflow.keras.preprocessing import image
+import tensorflow as tf
 
 # Improved import handling
 try:
@@ -58,9 +61,46 @@ def preprocess_image(image_path):
         print(f"❌ Image processing error: {e}")
         return None
 
-@app.route('/', methods=['GET'])
+@app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('index2.html')
+
+@app.route('/upload', methods=['POST'])
+def upload_file():
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file part'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'No selected file'}), 400
+    if not allowed_file(file.filename):
+        return jsonify({'error': 'Invalid file type. Allowed: png, jpg, jpeg, webp'}), 400
+
+    try:
+        # Save the file temporarily
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        
+        if model is None:
+            return jsonify({'error': 'Model failed to load. Contact administrator.'}), 500
+
+        processed_img = preprocess_image(filepath)
+        if processed_img is None:
+            return jsonify({'error': 'Failed to process image'}), 400
+
+        prediction = model.predict(processed_img)
+        confidence = float(prediction[0][0])
+        result = "No Brain Tumor" if confidence > 0.5 else "Brain Tumor Detected"
+        confidence_pct = int(confidence * 100) if result == "No Brain Tumor" else int((1 - confidence) * 100)
+
+        return jsonify({
+            'prediction': result,
+            'confidence': confidence_pct,
+            'image_url': f'/static/uploads/{filename}'
+        })
+    except Exception as e:
+        print(f"❌ Prediction error: {str(e)}")
+        return jsonify({'error': 'Internal server error'}), 500
 
 @app.route('/', methods=['POST'])
 def predict():
@@ -89,11 +129,11 @@ def predict():
         prediction = model.predict(processed_img)
         confidence = float(prediction[0][0])
         result = "No Brain Tumor" if confidence > 0.5 else "Brain Tumor Detected"
-        confidence_pct = confidence if result.startswith("No") else (1 - confidence)
+        confidence_pct = int(confidence * 100) if result == "No Brain Tumor" else int((1 - confidence) * 100)
 
         return jsonify({
             'prediction': result,
-            'confidence': round(confidence_pct * 100, 2),
+            'confidence': confidence_pct,
             'filename': filename
         })
     except Exception as e:
@@ -101,4 +141,5 @@ def predict():
         return jsonify({'error': 'Internal server error'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5001))
+    app.run(debug=True, host='0.0.0.0', port=port)

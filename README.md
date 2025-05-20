@@ -21,8 +21,9 @@ This project implements a brain tumor detection system that uses deep learning t
 - **Backend:**
   - Python 3.x
   - Flask (Web Framework)
-  - TensorFlow/Keras (Deep Learning)
+  - TensorFlow/Keras/OpenCV (Deep Learning)
   - NumPy (Numerical Computing)
+  - seborn / matplotlib (visualization purpose)
 
 - **Frontend:**
   - HTML5

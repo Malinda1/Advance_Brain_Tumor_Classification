@@ -63,7 +63,7 @@ def preprocess_image(image_path):
 
 @app.route('/')
 def home():
-    return render_template('index.html')
+    return render_template('index_2.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -90,8 +90,8 @@ def upload_file():
 
         prediction = model.predict(processed_img)
         confidence = float(prediction[0][0])
-        result = "No Brain Tumor" if confidence > 0.5 else "Brain Tumor Detected"
-        confidence_pct = int(confidence * 100) if result == "No Brain Tumor" else int((1 - confidence) * 100)
+        result = "Brain Tumor Detected" if confidence > 0.5 else "No Brain Tumor"
+        confidence_pct = int(confidence * 100) if result == "Brain Tumor Detected" else int((1 - confidence) * 100)
 
         return jsonify({
             'prediction': result,
@@ -128,7 +128,7 @@ def predict():
 
         prediction = model.predict(processed_img)
         confidence = float(prediction[0][0])
-        result = "No Brain Tumor" if confidence > 0.5 else "Brain Tumor Detected"
+        result = "No Brain Tumor " if confidence > 0.5 else "Brain Tumor Detected"
         confidence_pct = int(confidence * 100) if result == "No Brain Tumor" else int((1 - confidence) * 100)
 
         return jsonify({

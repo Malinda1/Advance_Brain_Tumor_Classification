@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Brain Tumor Detection</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f7fa;
+            color: #222831;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        h1, h2, h3 {
+            color: #222831;
+            text-align: center;
+        }
+        .upload-area {
+            border: 2px dashed #948979;
+            padding: 30px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+            cursor: pointer;
+            background-color: #f8f8f8;
+        }
+        #imagePreview {
+            max-width: 100%;
+            margin-top: 20px;
+            display: none;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #393E46;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-top: 10px;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #222831;
+        }
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .tumor {
+            background-color: rgba(223, 208, 184, 0.2);
+            border-left: 5px solid #948979;
+        }
+        .no-tumor {
+            background-color: rgba(57, 62, 70, 0.1);
+            border-left: 5px solid #393E46;
+        }
+        .error {
+            background-color: rgba(223, 208, 184, 0.3);
+            border-left: 5px solid #DFD0B8;
+        }
+        .confidence-bar {
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+        .confidence-level {
+            height: 100%;
+            text-align: right;
+            padding-right: 5px;
+            color: white;
+            line-height: 20px;
+            font-size: 14px;
+        }
+        .risk-low {
+            background-color: #DFD0B8;
+        }
+        .risk-medium {
+            background-color: #948979;
+        }
+        .risk-high {
+            background-color: #222831;
+        }
+        .results-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            margin-top: 30px;
+        }
+        @media (min-width: 768px) {
+            .results-container {
+                flex-direction: row;
+            }
+            .text-results {
+                flex: 1;
+            }
+            .chart-container {
+                flex: 1;
+            }
+        }
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+        }
+        .risk-level {
+            margin-top: 10px;
+            font-weight: bold;
+            padding: 5px 10px;
+            border-radius: 4px;
+            display: inline-block;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Brain Tumor Detection</h1>
+        <p>Upload a brain MRI scan to check for tumors</p>
+
+        <div class="upload-area" id="uploadArea">
+            <p>Drag & drop an image here or click to select</p>
+            <input type="file" id="fileInput" name="file" accept="image/*" style="display: none;">
+            <img id="imagePreview" alt="Preview">
+        </div>
+
+        <button type="button" id="predictBtn">Analyze Image</button>
+
+        <div id="result"></div>
+        
+        <div class="results-container" id="resultsContainer" style="display: none;">
+            <div class="text-results">
+                <div id="textResult"></div>
+            </div>
+            <div class="chart-container">
+                <h3>Risk Stratification</h3>
+                <canvas id="riskChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const uploadArea = document.getElementById('uploadArea');
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const predictBtn = document.getElementById('predictBtn');
+        const resultDiv = document.getElementById('result');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const textResult = document.getElementById('textResult');
+        
+        let riskChart = null;
+        let selectedFile = null;
+
+        // Handle drag and drop
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f0f0f0';
+        });
+
+        uploadArea.addEventListener('dragleave', () => {
+            uploadArea.style.backgroundColor = '#f8f8f8';
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.backgroundColor = '#f8f8f8';
+
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                handleFileSelection(e.dataTransfer.files[0]);
+            }
+        });
+
+        // Handle click to select
+        uploadArea.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) {
+                handleFileSelection(e.target.files[0]);
+            }
+        });
+
+        function handleFileSelection(file) {
+            if (!file.type.match('image.*')) {
+                showResult('Please upload an image file (JPEG, PNG)', 'error');
+                return;
+            }
+
+            selectedFile = file;
+
+            // Show preview
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                imagePreview.src = e.target.result;
+                imagePreview.style.display = 'block';
+                resultDiv.style.display = 'none';
+                resultsContainer.style.display = 'none';
+                if (riskChart) {
+                    riskChart.destroy();
+                    riskChart = null;
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // Determine risk level based on confidence percentage
+        function getRiskLevel(confidence) {
+            if (confidence < 30) {
+                return { level: 'Low Risk', color: '#DFD0B8', class: 'risk-low' };
+            } else if (confidence < 70) {
+                return { level: 'Medium Risk', color: '#948979', class: 'risk-medium' };
+            } else {
+                return { level: 'High Risk', color: '#222831', class: 'risk-high' };
+            }
+        }
+
+        // Create and update risk chart
+        function updateRiskChart(confidence) {
+            const ctx = document.getElementById('riskChart').getContext('2d');
+            
+            if (riskChart) {
+                riskChart.destroy();
+            }
+            
+            // Calculate remaining percentage for the pie chart
+            const remaining = 100 - confidence;
+            
+            const risk = getRiskLevel(confidence);
+            
+            riskChart = new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: [risk.level, 'Remaining'],
+                    datasets: [{
+                        data: [confidence, remaining],
+                        backgroundColor: [
+                            risk.color,
+                            '#e0e0e0'
+                        ],
+                        borderColor: [
+                            risk.color,
+                            '#e0e0e0'
+                        ],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return `${context.label}: ${context.raw}%`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Handle Analyze button click
+        predictBtn.addEventListener('click', async () => {
+            if (!fileInput.files.length) {
+                showResult('Please select an image first', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                predictBtn.disabled = true;
+                predictBtn.textContent = 'Processing...';
+
+                const response = await fetch('/', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+                
+                const data = await response.json();
+
+                if (data.error) {
+                    showResult(data.error, 'error');
+                    resultsContainer.style.display = 'none';
+                } else {
+                    const resultClass = data.prediction.includes('Yes') ? 'tumor' : 'no-tumor';
+                    const confidencePercent = data.confidence;
+                    const risk = getRiskLevel(confidencePercent);
+                    
+                    // Update text result
+                    let resultHtml = `<h3>${data.prediction}</h3>`;
+                    resultHtml += `<p>Confidence: ${confidencePercent}%</p>`;
+                    resultHtml += `<div class="confidence-bar">
+                                      <div class="confidence-level ${risk.class}" style="width: ${confidencePercent}%">
+                                        ${confidencePercent}%
+                                      </div>
+                                    </div>`;
+                    resultHtml += `<div class="risk-level ${risk.class}">${risk.level}</div>`;
+                    
+                    textResult.innerHTML = resultHtml;
+                    textResult.className = resultClass;
+                    
+                    // Update chart
+                    updateRiskChart(confidencePercent);
+                    
+                    // Show results
+                    resultsContainer.style.display = 'flex';
+                }
+            } catch (error) {
+                console.error(error);
+                showResult('Error communicating with server: ' + error.message, 'error');
+                resultsContainer.style.display = 'none';
+            } finally {
+                predictBtn.disabled = false;
+                predictBtn.textContent = 'Analyze Image';
+            }
+        });
+
+        function showResult(message, className) {
+            resultDiv.textContent = message;
+            resultDiv.className = className;
+            resultDiv.style.display = 'block';
+            resultsContainer.style.display = 'none';
+        }
+    </script>
+</body>
+</html>

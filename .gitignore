@@ -8,6 +8,8 @@ saved_models/
 # Jupyter Notebook
 .ipynb_checkpoints
 *.ipynb
+!Brain_Tumor_Classification.ipynb
+!fine_tuning_model.ipynb
 
 # Python
 __pycache__/
